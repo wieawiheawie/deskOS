@@ -1,5 +1,5 @@
 /* DeskOS offline app shell. The desktop itself makes no network requests. */
-const CACHE_PREFIX = 'deskos-shell-v2';
+const CACHE_PREFIX = 'deskos-shell-v3';
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_PREFIX);
@@ -12,6 +12,7 @@ self.addEventListener('install', (event) => {
     const assets = new Set(['./manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png']);
     for (const match of html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)) assets.add(match[1]);
     assets.add('./network-apps.js');
+    assets.add('./browser-workspace.js');
     for (const path of assets) {
       try { const response = await fetch(new URL(path, scope)); if (response.ok) await cache.put(new URL(path, scope), response); } catch { /* one optional asset must not block installation */ }
     }
