@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#111827" />
+    <meta name="description" content="DeskOS — a standalone-window desktop environment experiment." />
+    <meta name="application-name" content="DeskOS" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="icon" href="./icons/deskos.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <title>DeskOS</title>
+  </head>
+  <body>
+    <div id="boot" class="boot-screen"><div class="boot-mark">◇</div><div class="boot-name">DeskOS</div><div class="boot-track"><i></i></div><small>Starting desktop services…</small></div>
+    <main id="desktop" class="desktop" aria-label="DeskOS desktop">
+      <header class="topbar">
+        <button class="brand-button" id="brandButton" aria-label="Open DeskOS menu"><span class="brand-glyph">◇</span><b>DESKOS</b><span class="crumb">/ DESKTOP</span></button>
+        <div class="top-right"><span class="connection-pill"><i></i><span id="connectionText">Starting</span></span><span class="save-pill" id="saveState">Local workspace</span><span class="clock" id="clock">--:--</span></div>
+      </header>
+      <section class="desktop-icons" aria-label="Desktop applications">
+        <button class="desktop-icon" data-app="files"><span class="icon-tile">📁</span><span>My Files</span></button>
+        <button class="desktop-icon" data-app="notes"><span class="icon-tile">📝</span><span>Notes</span></button>
+        <button class="desktop-icon" data-app="calculator"><span class="icon-tile">🧮</span><span>Calculator</span></button>
+        <button class="desktop-icon" data-app="terminal"><span class="icon-tile">⌘</span><span>Terminal</span></button>
+        <button class="desktop-icon" data-app="system"><span class="icon-tile">🛠️</span><span>System Check</span></button>
+        <button class="desktop-icon" data-app="about"><span class="icon-tile">◇</span><span>About DeskOS</span></button>
+      </section>
+      <section id="windowLayer" class="window-layer" aria-label="Open applications"></section>
+      <div id="startMenu" class="start-menu" hidden>
+        <div class="start-head"><div class="start-logo">◇</div><div><b>DeskOS</b><small>Desktop environment</small></div><button class="icon-button" id="startClose" aria-label="Close menu">×</button></div>
+        <div class="start-search"><span>⌕</span><input id="appSearch" placeholder="Search apps" autocomplete="off" /></div>
+        <div class="start-label">PINNED APPLICATIONS</div>
+        <div class="app-grid" id="appGrid">
+          <button data-app="files"><span>📁</span>Files</button><button data-app="notes"><span>📝</span>Notes</button><button data-app="calculator"><span>🧮</span>Calculator</button><button data-app="terminal"><span>⌘</span>Terminal</button><button data-app="system"><span>🛠️</span>System Check</button><button data-app="settings"><span>⚙️</span>Settings</button><button data-app="about"><span>◇</span>About</button>
+        </div>
+        <div class="start-foot"><div><b>Local session</b><small>Changes stay in this browser profile</small></div><button class="power-button" id="lockButton" title="Lock screen demo">⏻</button></div>
+      </div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <footer class="dock-wrap">
+        <nav class="dock" aria-label="Taskbar">
+          <button class="dock-home active" id="dockHome" title="Applications">◇</button><span class="dock-divider"></span>
+          <button class="dock-app" data-app="files" title="Files">📁</button><button class="dock-app" data-app="notes" title="Notes">📝</button><button class="dock-app" data-app="calculator" title="Calculator">🧮</button><button class="dock-app" data-app="terminal" title="Terminal">⌘</button><button class="dock-app" data-app="settings" title="Settings">⚙️</button><span class="dock-divider"></span>
+          <button class="dock-app" data-app="system" title="System Check">🛠️</button><button class="dock-app" data-app="about" title="About">ⓘ</button>
+        </nav>
+      </footer>
+      <div id="lockScreen" class="lock-screen" hidden><div class="lock-symbol">◇</div><div class="lock-title">DeskOS</div><div class="lock-time" id="lockTime">--:--</div><p>This is a demo lock screen. Your browser session is still active.</p><button class="primary-button" id="unlockButton">Return to desktop</button></div>
+    </main>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

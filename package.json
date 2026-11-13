@@ -1,0 +1,13 @@
+{
+  "name": "deskos-pwa",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}
