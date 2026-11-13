@@ -1,56 +1,49 @@
 # DeskOS Desktop
 
-DeskOS is an installable Progressive Web App (PWA) desktop environment experiment. When installed by ChromeOS/Chrome, it opens in a standalone app window without normal browser tabs or the address bar. The browser engine still runs underneath; this is not a native executable or a replacement for ChromeOS.
+DeskOS is a browser-powered desktop environment published as a static Progressive Web App. It can run as a normal website tab; a separate app window is only available when the browser or device administrator allows PWA installation. It is not a native operating system and does not replace ChromeOS.
 
-## Included in this build
+## DeskOS 0.2.0
 
-- Desktop, launcher and dock/taskbar
-- Draggable, resizable, minimisable and maximisable app windows
-- Virtual file manager with folders, text files, import and export
-- Notes with local autosave
-- Calculator with arithmetic expression parsing
-- Simulated terminal with built-in commands (not a device shell)
-- Settings, accent colours, workspace backup and reset
-- Browser capability checks
-- PWA manifest and service worker for offline app-shell caching
+- Desktop, launcher, dock/taskbar and draggable application windows
+- My Files virtual workspace with folders, import and export
+- Larger workspace storage using IndexedDB, with localStorage as a small-workspace fallback
+- Notes, calculator, settings, appearance controls and simulated demo terminal
+- Internet window with URL/search bar, shortcuts and embedded-page viewing where the target site permits framing
+- Downloads window for opening direct file URLs through Chrome and importing CORS-enabled files into DeskOS
+- Game Hub with browser-game directories
+- App Library with web apps and online tools
+- PWA manifest, service worker and offline shell caching
 - GitHub Actions workflow that type-checks, compiles and deploys to GitHub Pages
 
-The desktop makes no analytics calls or external API requests. Fonts use local system fallbacks. GitHub Pages is needed to publish the app and install it initially; after the app shell is cached, it can launch offline, subject to school browser policy.
+## Internet and website limits
 
-## Publish from GitHub without a terminal
+The Internet window is a lightweight web viewer, not a replacement for a full browser engine. Many popular websites send security headers such as `X-Frame-Options` or CSP `frame-ancestors` that prevent them from being displayed inside an iframe. When a site refuses embedded display, use the external/open-in-browser control or a link in the App Library. School network filters and website account policies still apply.
 
-1. Create a new GitHub repository named `deskos` (a public repository is the simplest option for GitHub Pages on a free account; do not publish private or sensitive data in it).
-2. Extract the downloaded project ZIP on your Chromebook.
-3. In the Chromebook Files app, press **Ctrl + . (period)** to show hidden files so you can see the `.github` folder. In the new repository, choose **Add file → Upload files** and upload the *contents* of the extracted `deskos-pwa` folder, including `.github/workflows/deploy.yml`.
-4. Commit the upload to the `main` branch.
-5. Open **Settings → Pages** and set **Build and deployment → Source** to **GitHub Actions**.
-6. Open the **Actions** tab. Wait for **Build and deploy DeskOS** to complete successfully.
-7. Open the GitHub Pages URL shown by the deployment. The URL normally looks like `https://YOUR-USERNAME.github.io/deskos/`.
+## Downloads and files
 
-GitHub's documented Pages workflow uses an Actions build, the Pages artifact upload action and a deployment job with `pages: write` and `id-token: write` permissions.
+- **Download to Chromebook** opens the supplied HTTP/HTTPS URL in Chrome. Chrome decides whether to download or display it, and where to save it.
+- **Import into DeskOS** fetches a file into the virtual `/Home/Downloads` folder. It only works if the file host permits cross-origin browser requests (CORS). The per-file import limit is 40 MB.
+- The Files app can also import files selected from the Chromebook's file picker. Export creates a browser download.
+- DeskOS does not scan downloads for malware. Only download files from sources you trust.
 
-## Install on ChromeOS
+A web app cannot install or execute arbitrary Windows, macOS, Linux, or Android programs. Browser games and web apps work only if their providers support browsers and are allowed by the school network. Native games and desktop programs still require a compatible native runtime.
 
-1. Open the deployed GitHub Pages URL in Chrome while online.
-2. Wait for DeskOS to finish loading and for the service worker to register.
-3. Open Chrome's menu → **Cast, save and share** → **Install page as app**. Chrome may also show an Install icon in the address bar.
-4. Launch **DeskOS** from the Chromebook Launcher. The installed app should open in a separate window without tabs or an address bar.
-5. Open DeskOS once online before testing offline. The service worker caches the compiled app shell.
+## Privacy and storage
 
-If the install option is missing or says it is blocked, your school's Chromebook policy may prohibit installing web apps. DeskOS cannot override that restriction. You can still use the hosted URL as a normal tab if the site is permitted.
+DeskOS makes no analytics calls. The Internet and catalogue apps connect only when the user opens an address, follows a site link, or imports a download. Virtual files and notes are stored in the current browser profile using IndexedDB and localStorage where allowed. Browser cleanup, private browsing, storage limits, or school policy can remove or restrict that data. Do not store sensitive or irreplaceable files only in DeskOS; export workspace backups regularly.
 
-## Build locally (optional)
+## Build and deploy
 
-Requires Node.js 24 or later:
+The project uses TypeScript and a small Node build script; it does not require a local development server.
 
 ```sh
-npm install
+npm install --no-audit --no-fund
 npm run typecheck
 npm run build
 ```
 
-The compiled static app is created in `dist/`. The build uses the TypeScript compiler and a small Node.js packaging script; it does not start a development server.
+The compiled static site is written to `dist/`. Push to `main` to run the GitHub Actions workflow. The workflow type-checks and builds the site, uploads the Pages artifact, and deploys it to GitHub Pages.
 
-## Storage notes
+## ChromeOS
 
-The demo's virtual files, notes and settings use browser local storage. School policy, private browsing, profile cleanup or storage quotas may restrict persistence. The file import demo is limited to 3 MB per file and 3 MB is a deliberate safety limit for this lightweight prototype.
+Open the published Pages URL in Chrome. If PWA installation is permitted, the browser may offer **Install page as app** and launch DeskOS without tabs or the address bar. If the install option is missing or blocked, use the hosted page as a normal browser tab. DeskOS cannot override school administrator restrictions.
