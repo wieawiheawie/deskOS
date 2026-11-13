@@ -1,4 +1,6 @@
-type AppId = 'files' | 'notes' | 'calculator' | 'terminal' | 'settings' | 'system' | 'about';
+import { networkAppBody, wireNetworkApp, type NetworkAppId, type WorkspaceDownload } from './network-apps.js';
+
+type AppId = 'files' | 'notes' | 'calculator' | 'terminal' | 'settings' | 'system' | 'about' | NetworkAppId;
 type VirtualFile = { id: string; name: string; path: string; type: string; content: string; folder: boolean; modified: number; size: number };
 type WindowRecord = { id: string; app: AppId; element: HTMLElement; minimized: boolean; maximized: boolean; previous: { left: string; top: string; width: string; height: string } | null };
 
@@ -16,7 +18,11 @@ const APP_META: Record<AppId, { name: string; icon: string; size: [number, numbe
   terminal: { name: 'Terminal', icon: '⌘', size: [600, 390] },
   settings: { name: 'Settings', icon: '⚙️', size: [610, 440] },
   system: { name: 'System Check', icon: '🛠️', size: [570, 430] },
-  about: { name: 'About DeskOS', icon: '◇', size: [530, 410] }
+  about: { name: 'About DeskOS', icon: '◇', size: [530, 410] },
+  browser: { name: 'Internet', icon: '🌐', size: [860, 590] },
+  downloads: { name: 'Downloads', icon: '⬇️', size: [650, 560] },
+  games: { name: 'Game Hub', icon: '🎮', size: [690, 550] },
+  store: { name: 'App Library', icon: '▦', size: [690, 550] }
 };
 const APP_IDS = Object.keys(APP_META) as AppId[];
 const STORAGE_FILES = 'deskos.files.v1';
@@ -70,7 +76,7 @@ function updateClock(): void {
 }
 function updateConnection(): void {
   const online = navigator.onLine;
-  $('#connectionText').textContent = online ? 'Offline-ready' : 'Offline';
+  $('#connectionText').textContent = online ? 'Online' : 'Offline';
   $('.connection-pill').classList.toggle('offline', !online);
 }
 function markSaveState(saved: boolean): void {
@@ -86,7 +92,8 @@ function appBody(app: AppId): string {
     case 'terminal': return `<div class="terminal-wrap"><div class="terminal-output" id="terminalOutput"><span class="good">DeskOS Terminal [simulated]</span>\n<span class="dim">This is a built-in command console, not a system shell.</span>\nType <b>help</b> to see available commands.\n\n</div><form class="terminal-input-line" id="terminalForm"><span>guest@deskos:~$</span><input id="terminalInput" class="terminal-input" autocomplete="off" spellcheck="false" aria-label="Terminal command" /></form></div>`;
     case 'settings': return `<div class="settings-layout"><nav class="settings-nav"><button class="side-link active" data-settings="appearance">🎨 Appearance</button><button class="side-link" data-settings="storage">💾 Storage</button><button class="side-link" data-settings="about">ℹ️ About</button></nav><section class="settings-content" id="settingsContent"></section></div>`;
     case 'system': return `<div class="system-content"><h3>Device compatibility</h3><p>DeskOS checks normal browser capabilities. It does not change device settings or bypass school restrictions.</p><div class="status-list" id="systemChecks"></div><div class="system-actions"><button class="primary-button" data-action="install-app">Install DeskOS</button><button class="secondary-button" data-action="run-checks">Run checks again</button><button class="secondary-button" data-action="storage-test">Test local save</button></div><div class="system-note">For offline use, open DeskOS once while connected so its app shell can be cached. A school administrator may disable installation, storage or offline features.</div></div>`;
-    case 'about': return `<div class="about-hero"><div class="about-logo">◇</div><h2>DeskOS Desktop</h2><p>A standalone-window desktop experiment.<br/>Build 0.1.0 · GitHub Pages PWA edition</p><div style="margin-top:14px"><button class="primary-button" data-action="install-app">Install DeskOS as an app</button></div></div><div class="about-panel"><h3>What this is</h3><p>DeskOS is a Progressive Web App. When installed or opened as an app window, it hides the normal browser tabs and address bar. ChromeOS and the browser still provide the underlying runtime.</p></div><div class="about-panel"><h3>Privacy & offline</h3><p>The desktop makes no analytics or application network requests. Your notes, settings and virtual files stay in this browser profile when storage is permitted. After the first successful load, the service worker caches the app shell for offline launches.</p></div><div class="about-panel"><h3>Platform limits</h3><p>DeskOS cannot replace ChromeOS, run arbitrary Linux programs, or access protected system hardware. Some features may be disabled by your school administrator.</p></div>`;
+    case 'about': return `<div class="about-hero"><div class="about-logo">◇</div><h2>DeskOS Desktop</h2><p>A browser-powered desktop environment.<br/>Build 0.2.0 · Internet and downloads edition</p></div><div class="about-panel"><h3>What this is</h3><p>DeskOS now includes an Internet window, direct downloads, a game hub and a web app library. ChromeOS and the browser still provide the underlying runtime.</p></div><div class="about-panel"><h3>Files and privacy</h3><p>Your workspace is stored in this browser profile using local storage and IndexedDB when available. Downloading to the Chromebook is handled by Chrome itself.</p></div><div class="about-panel"><h3>Platform limits</h3><p>DeskOS cannot run arbitrary Windows, Mac or Linux programs, bypass school restrictions, or access protected system hardware. Some websites block embedded viewing or downloads.</p></div>`;
+    case 'browser': case 'downloads': case 'games': case 'store': return networkAppBody(app);
   }
 }
 
@@ -167,6 +174,19 @@ function wireApp(record: WindowRecord): void {
   if (record.app === 'terminal') wireTerminal(root);
   if (record.app === 'settings') wireSettings(root);
   if (record.app === 'system') wireSystem(root);
+  if (record.app === 'browser' || record.app === 'downloads' || record.app === 'games' || record.app === 'store') {
+    wireNetworkApp(record.app, root, showToast, (file: WorkspaceDownload) => saveDownloadedFile(file));
+  }
+}
+
+function saveDownloadedFile(file: WorkspaceDownload): void {
+  const downloadsPath = '/Home/Downloads';
+  if (!fileSystem.some((item) => item.folder && item.path === '/Home' && item.name === 'Downloads')) {
+    fileSystem.push({ id: 'folder-downloads', name: 'Downloads', path: '/Home', type: 'folder', content: '', folder: true, modified: Date.now(), size: 0 });
+  }
+  fileSystem.push({ id: `download-${crypto.randomUUID?.() || Date.now()}`, name: file.name, path: downloadsPath, type: file.type, content: file.content, folder: false, modified: Date.now(), size: file.size });
+  saveFiles();
+  showToast(`Saved ${file.name} in My Files / Downloads.`);
 }
 
 function renderFiles(root: HTMLElement): void {
@@ -207,7 +227,7 @@ function wireFiles(root: HTMLElement): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files || []);
     for (const file of files) {
-      if (file.size > 3 * 1024 * 1024) { showToast(`${file.name} is over the 3 MB demo import limit.`); continue; }
+      if (file.size > 40 * 1024 * 1024) { showToast(`${file.name} is over the 40 MB DeskOS import limit. Use Chromebook downloads for larger files.`); continue; }
       let content = '';
       if (file.type.startsWith('text/') || /\.(md|json|csv|js|ts|css|html|xml|yaml|yml)$/i.test(file.name)) content = await file.text();
       else content = await readDataUrl(file);
@@ -327,7 +347,10 @@ function systemRows(): Array<[string, string, boolean]> {
     ['IndexedDB', indexed ? 'Available' : 'Unavailable', indexed],
     ['WebAssembly', wasm ? 'Available' : 'Unavailable', wasm],
     ['Native file picker', filePicker ? 'Available' : 'Standard import fallback', true],
-    ['Clipboard API', clipboard ? 'Available in secure context' : 'Restricted or unavailable', clipboard]
+    ['Clipboard API', clipboard ? 'Available in secure context' : 'Restricted or unavailable', clipboard],
+    ['Internet connection', navigator.onLine ? 'Connected' : 'Offline', navigator.onLine],
+    ['File downloads', typeof Blob === 'function' && typeof URL.createObjectURL === 'function' ? 'Available through Chrome' : 'Unavailable', typeof Blob === 'function' && typeof URL.createObjectURL === 'function'],
+    ['Persistent browser database', indexed ? 'IndexedDB available' : 'Unavailable', indexed]
   ];
 }
 function wireSystem(root: HTMLElement): void {
@@ -366,6 +389,7 @@ async function installDeskOS(): Promise<void> {
 function closeStartMenu(): void { $('#startMenu').hidden = true; $('#dockHome').classList.remove('active'); }
 function toggleStartMenu(): void { const menu = $('#startMenu'); menu.hidden = !menu.hidden; $('#dockHome').classList.toggle('active', !menu.hidden); if (!menu.hidden) ($('#appSearch') as HTMLInputElement).focus(); }
 function initShell(): void {
+  void hydrateFilesFromIndexedDB();
   applyAccent(); updateClock(); window.setInterval(updateClock, 1000); updateConnection(); window.addEventListener('online', updateConnection); window.addEventListener('offline', updateConnection);
   $('#brandButton').addEventListener('click', toggleStartMenu); $('#dockHome').addEventListener('click', toggleStartMenu); $('#startClose').addEventListener('click', closeStartMenu);
   document.querySelectorAll<HTMLElement>('[data-app]').forEach((button) => button.addEventListener('click', () => openApp(button.dataset.app as AppId)));
