@@ -55,9 +55,64 @@ function loadFiles(): VirtualFile[] {
     { id: 'system-info', name: 'System info.txt', path: '/Home/Documents', type: 'text/plain', content: 'DeskOS Desktop\nBuild 0.1.0\nRuntime: browser app window\nStorage: local browser storage\nNetwork: not required after first successful load', folder: false, modified: Date.now(), size: 117 }
   ];
 }
+const STORAGE_DB_NAME = 'deskos-workspace';
+async function openStorageDatabase(): Promise<IDBDatabase> {
+  return await new Promise((resolve, reject) => {
+    const request = indexedDB.open(STORAGE_DB_NAME, 1);
+    request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains('state')) request.result.createObjectStore('state'); };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('IndexedDB could not be opened.'));
+  });
+}
+async function readFilesFromDatabase(): Promise<VirtualFile[] | null> {
+  const db = await openStorageDatabase();
+  return await new Promise((resolve, reject) => {
+    const tx = db.transaction('state', 'readonly');
+    const request = tx.objectStore('state').get(STORAGE_FILES);
+    request.onsuccess = () => resolve(Array.isArray(request.result) ? request.result as VirtualFile[] : null);
+    request.onerror = () => reject(request.error || new Error('Could not read workspace files.'));
+    tx.oncomplete = () => db.close();
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('Could not read workspace files.')); };
+  });
+}
+async function writeFilesToDatabase(): Promise<void> {
+  const db = await openStorageDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction('state', 'readwrite');
+    tx.objectStore('state').put(fileSystem, STORAGE_FILES);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('Could not save workspace files.')); };
+    tx.onabort = () => { db.close(); reject(tx.error || new Error('Workspace save was cancelled.')); };
+  });
+}
+async function hydrateFilesFromIndexedDB(): Promise<void> {
+  if (!('indexedDB' in window)) return;
+  try {
+    const stored = await readFilesFromDatabase();
+    if (stored) fileSystem = stored;
+    else await writeFilesToDatabase();
+    const saveState = document.querySelector<HTMLElement>('#saveState');
+    if (saveState) saveState.textContent = 'Saved locally';
+  } catch {
+    const saveState = document.querySelector<HTMLElement>('#saveState');
+    if (saveState) saveState.textContent = 'Browser storage limited';
+  }
+}
 function saveFiles(): boolean {
-  try { localStorage.setItem(STORAGE_FILES, JSON.stringify(fileSystem)); $('#saveState').textContent = 'Saved locally'; return true; }
-  catch { $('#saveState').textContent = 'Storage restricted'; return false; }
+  let localSaved = false;
+  try { localStorage.setItem(STORAGE_FILES, JSON.stringify(fileSystem)); localSaved = true; } catch { /* larger workspaces use IndexedDB */ }
+  if ('indexedDB' in window) {
+    void writeFilesToDatabase().then(() => {
+      const saveState = document.querySelector<HTMLElement>('#saveState');
+      if (saveState) saveState.textContent = 'Saved locally';
+    }).catch(() => {
+      const saveState = document.querySelector<HTMLElement>('#saveState');
+      if (saveState) saveState.textContent = localSaved ? 'Saved locally' : 'Storage restricted';
+    });
+    return true;
+  }
+  $('#saveState').textContent = localSaved ? 'Saved locally' : 'Storage restricted';
+  return localSaved;
 }
 function loadSettings(): { accent: string } {
   try { return { accent: JSON.parse(localStorage.getItem(STORAGE_SETTINGS) || '{}').accent || '#7898ff' }; }
@@ -388,8 +443,8 @@ async function installDeskOS(): Promise<void> {
 }
 function closeStartMenu(): void { $('#startMenu').hidden = true; $('#dockHome').classList.remove('active'); }
 function toggleStartMenu(): void { const menu = $('#startMenu'); menu.hidden = !menu.hidden; $('#dockHome').classList.toggle('active', !menu.hidden); if (!menu.hidden) ($('#appSearch') as HTMLInputElement).focus(); }
-function initShell(): void {
-  void hydrateFilesFromIndexedDB();
+async function initShell(): Promise<void> {
+  await hydrateFilesFromIndexedDB();
   applyAccent(); updateClock(); window.setInterval(updateClock, 1000); updateConnection(); window.addEventListener('online', updateConnection); window.addEventListener('offline', updateConnection);
   $('#brandButton').addEventListener('click', toggleStartMenu); $('#dockHome').addEventListener('click', toggleStartMenu); $('#startClose').addEventListener('click', closeStartMenu);
   document.querySelectorAll<HTMLElement>('[data-app]').forEach((button) => button.addEventListener('click', () => openApp(button.dataset.app as AppId)));
