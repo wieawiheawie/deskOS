@@ -100,7 +100,12 @@ async function hydrateFilesFromIndexedDB(): Promise<void> {
 }
 function saveFiles(): boolean {
   let localSaved = false;
-  try { localStorage.setItem(STORAGE_FILES, JSON.stringify(fileSystem)); localSaved = true; } catch { /* larger workspaces use IndexedDB */ }
+  const estimatedContentSize = fileSystem.reduce((total, item) => total + item.content.length, 0);
+  if (estimatedContentSize < 3_000_000) {
+    try { localStorage.setItem(STORAGE_FILES, JSON.stringify(fileSystem)); localSaved = true; } catch { /* larger workspaces use IndexedDB */ }
+  } else {
+    try { localStorage.removeItem(STORAGE_FILES); } catch { /* IndexedDB remains the primary store */ }
+  }
   if ('indexedDB' in window) {
     void writeFilesToDatabase().then(() => {
       const saveState = document.querySelector<HTMLElement>('#saveState');
