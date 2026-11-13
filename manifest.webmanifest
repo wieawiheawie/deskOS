@@ -2,7 +2,7 @@
   "id": "./",
   "name": "DeskOS Desktop",
   "short_name": "DeskOS",
-  "description": "A personal desktop environment that launches in its own app window.",
+  "description": "A browser-powered desktop with internet access, downloads, games and web applications.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
